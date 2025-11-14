@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KSL 데이터 수집기</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="{{ url_for('index') }}" class="navbar-brand">
+                🤟 KSL 수어 통역
+            </a>
+            <ul class="navbar-menu">
+                <li class="navbar-item">
+                    <a href="{{ url_for('index') }}" class="navbar-link">
+                        🎥 실시간 통역
+                    </a>
+                </li>
+                <li class="navbar-item">
+                    <a href="{{ url_for('workspace') }}" class="navbar-link">
+                        🚀 워크스페이스
+                    </a>
+                </li>
+                <li class="navbar-item">
+                    <a href="{{ url_for('train') }}" class="navbar-link">
+                        🧠 모델 학습
+                    </a>
+                </li>
+                <li class="navbar-item">
+                    <a href="{{ url_for('collector') }}" class="navbar-link active">
+                        📊 데이터 수집
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <header class="header">
+            <h1>KSL 데이터 수집기</h1>
+            <p>머신러닝 모델 학습을 위한 손동작 데이터를 수집합니다.</p>
+        </header>
+
+        <div class="main-content" style="display: block;">
+            <div class="left-panel">
+                <div class="video-section">
+                    <div class="video-container">
+                        <video id="video" autoplay playsinline muted></video>
+                        <canvas id="canvas"></canvas>
+                    </div>
+                </div>
+                <div class="controls-panel">
+                    <div class="control-section">
+                        <label for="gestureSelect">1. 수집할 동작 선택:</label>
+                        <select id="gestureSelect" class="form-control"></select>
+                    </div>
+                    <div class="button-group">
+                        <button class="btn btn-primary" id="startBtn">카메라 시작</button>
+                        <button class="btn btn-success" id="recordBtn" disabled>녹화 시작</button>
+                        <button class="btn btn-danger" id="stopBtn" disabled>정지</button>
+                    </div>
+                </div>
+            </div>
+            <div class="right-panel">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>수집 현황</h3>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>현재 동작:</strong> <span id="currentGesture">선택 안됨</span></p>
+                        <p><strong>이번 세션에서 수집된 개수:</strong> <span id="sessionCount">0</span></p>
+                        <p><strong>총 수집된 개수:</strong> <span id="totalCount">0</span></p>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" id="progressBar" style="width: 0%;"></div>
+                        </div>
+                        <p id="recordingStatus" class="text-muted">대기 중...</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3>데이터 관리</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="button-group">
+                            <button class="btn btn-secondary" id="downloadBtn">데이터셋 다운로드 (JSON)</button>
+                            <button class="btn btn-warning" id="resetBtn">전체 리셋</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0"></script>
+    <script src="{{ url_for('static', filename='js/model.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/collector.js') }}"></script>
+</body>
+</html>

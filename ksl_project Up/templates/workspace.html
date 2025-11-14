@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KSL 통합 워크스페이스</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+        /* Tab Navigation */
+        .tab-nav {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            background: var(--bg-primary);
+            padding: 8px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px var(--shadow);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 16px 24px;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .tab-btn:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(45, 55, 72, 0.2);
+        }
+
+        .tab-btn .tab-icon {
+            font-size: 1.5rem;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Progress Flow */
+        .progress-flow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 24px;
+            padding: 20px;
+            background: var(--bg-primary);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px var(--shadow);
+        }
+
+        .flow-step {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 20px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .flow-step.active {
+            background: linear-gradient(135deg, var(--success) 0%, #38a169 100%);
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .flow-step.completed {
+            background: var(--success);
+            color: white;
+        }
+
+        .flow-arrow {
+            font-size: 1.5rem;
+            color: var(--text-tertiary);
+        }
+
+        /* Training Progress */
+        .training-progress {
+            margin-top: 20px;
+        }
+
+        .epoch-progress {
+            margin-bottom: 16px;
+        }
+
+        .epoch-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .progress-bar-container {
+            height: 8px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success) 0%, #38a169 100%);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .metric-box {
+            background: var(--bg-tertiary);
+            padding: 16px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .metric-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .training-log {
+            max-height: 300px;
+            overflow-y: auto;
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 16px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            margin-top: 16px;
+        }
+
+        .log-entry {
+            margin-bottom: 4px;
+            line-height: 1.6;
+        }
+
+        .log-entry.success {
+            color: #48bb78;
+        }
+
+        .log-entry.error {
+            color: #f56565;
+        }
+
+        .log-entry.info {
+            color: #4299e1;
+        }
+
+        /* Gesture Collection Progress */
+        .gesture-search-box {
+            margin-bottom: 16px;
+        }
+
+        .gesture-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 12px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .gesture-card {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 16px;
+            border: 2px solid var(--border);
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .gesture-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px var(--shadow);
+        }
+
+        .gesture-card.selected {
+            border-color: #4299e1;
+            background: rgba(66, 153, 225, 0.1);
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
+            transform: scale(1.02);
+        }
+
+        .gesture-card.completed {
+            background: linear-gradient(135deg, rgba(72, 187, 120, 0.08) 0%, rgba(72, 187, 120, 0.03) 100%);
+            position: relative;
+        }
+
+        .gesture-card.completed::before {
+            content: '✓';
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: var(--success);
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .gesture-card.selected.completed {
+            border-color: #4299e1;
+            background: rgba(66, 153, 225, 0.15);
+        }
+
+        .gesture-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .gesture-name {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .gesture-count {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .gesture-card.completed .gesture-count {
+            color: var(--success);
+        }
+
+        .gesture-progress-bar {
+            height: 8px;
+            background: var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+
+        .gesture-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--info) 0%, var(--primary) 100%);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .gesture-card.completed .gesture-progress-fill {
+            background: linear-gradient(90deg, var(--success) 0%, #38a169 100%);
+        }
+
+        .gesture-progress-text {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-align: right;
+            font-weight: 600;
+        }
+
+        .gesture-card.completed .gesture-progress-text {
+            color: var(--success);
+        }
+
+        /* Form controls */
+        .form-control {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+            background: var(--bg-primary);
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(45, 55, 72, 0.1);
+        }
+
+        .text-muted {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .text-success {
+            color: var(--success);
+        }
+
+        .text-warning {
+            color: var(--warning);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-warning {
+            background: var(--warning);
+            color: var(--text-primary);
+        }
+
+        /* Recording indicator */
+        .recording-indicator {
+            position: absolute;
+            top: 70px;
+            left: 16px;
+            padding: 8px 16px;
+            background: rgba(245, 101, 101, 0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 8px;
+            color: white;
+            font-size: 0.875rem;
+            font-weight: 600;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            z-index: 10;
+            animation: pulse-recording 1.5s infinite;
+        }
+
+        .recording-indicator.active {
+            display: flex;
+        }
+
+        @keyframes pulse-recording {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .recording-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: white;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50%, 100% { opacity: 1; }
+            25%, 75% { opacity: 0.3; }
+        }
+
+        /* Hand detection indicator */
+        .hand-detection-badge {
+            position: absolute;
+            top: 70px;
+            right: 16px;
+            padding: 8px 16px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 8px;
+            color: white;
+            font-size: 0.875rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 10;
+        }
+
+        .hand-icon {
+            font-size: 1.2rem;
+        }
+
+        .hand-detection-badge.detected {
+            background: rgba(72, 187, 120, 0.9);
+        }
+
+        /* Keyboard shortcuts help */
+        .shortcuts-help {
+            background: var(--bg-tertiary);
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 12px;
+            font-size: 0.85rem;
+        }
+
+        .shortcut-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 0;
+        }
+
+        .shortcut-key {
+            background: var(--bg-primary);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-family: monospace;
+        }
+
+        /* Quick stats */
+        .quick-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .quick-stat {
+            background: var(--bg-tertiary);
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .quick-stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .quick-stat-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* Auto-save notification */
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 16px 24px;
+            background: var(--success);
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            display: none;
+            align-items: center;
+            gap: 12px;
+            z-index: 10000;
+            animation: slideIn 0.3s ease;
+        }
+
+        .notification.show {
+            display: flex;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Live progress bar */
+        .live-progress-container {
+            background: var(--bg-primary);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 16px;
+            box-shadow: 0 2px 4px var(--shadow);
+        }
+
+        .live-progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .live-progress-title {
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .live-progress-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .target-display {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .target-value {
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .edit-target-btn {
+            padding: 6px 12px;
+            background: var(--secondary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .edit-target-btn:hover {
+            background: var(--primary);
+            transform: translateY(-1px);
+        }
+
+        .live-progress-bar-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .live-progress-bar-container {
+            position: relative;
+            height: 32px;
+            background: #e2e8f0;
+            border-radius: 16px;
+            overflow: hidden;
+            flex: 1;
+            border: 2px solid #cbd5e0;
+        }
+
+        .live-progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4299e1 0%, #3182ce 50%, #2c5282 100%);
+            border-radius: 14px;
+            transition: width 0.5s ease;
+            position: relative;
+            box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.3);
+        }
+
+        .live-progress-bar-fill.complete {
+            background: linear-gradient(90deg, #48bb78 0%, #38a169 50%, #2f855a 100%);
+            animation: celebrate 1s ease;
+        }
+
+        @keyframes celebrate {
+            0%, 100% { transform: scaleY(1); }
+            50% { transform: scaleY(1.1); }
+        }
+
+        .live-progress-text {
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--text-primary);
+            min-width: 140px;
+            text-align: right;
+        }
+
+        .live-progress-text.complete {
+            color: var(--success);
+        }
+
+        .live-progress-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .progress-remaining {
+            font-weight: 600;
+        }
+
+        .progress-remaining.complete {
+            color: var(--success);
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 10001;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: var(--bg-primary);
+            padding: 32px;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+            max-width: 400px;
+            width: 90%;
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            margin-bottom: 24px;
+        }
+
+        .modal-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .modal-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(45, 55, 72, 0.1);
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 12px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .modal-btn-cancel {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .modal-btn-cancel:hover {
+            background: var(--border);
+        }
+
+        .modal-btn-confirm {
+            background: var(--primary);
+            color: white;
+        }
+
+        .modal-btn-confirm:hover {
+            background: var(--primary-light);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="{{ url_for('index') }}" class="navbar-brand">
+                🤟 KSL 수어 통역
+            </a>
+            <ul class="navbar-menu">
+                <li class="navbar-item">
+                    <a href="{{ url_for('index') }}" class="navbar-link">
+                        🎥 실시간 통역
+                    </a>
+                </li>
+                <li class="navbar-item">
+                    <a href="{{ url_for('workspace') }}" class="navbar-link active">
+                        🚀 워크스페이스
+                    </a>
+                </li>
+                <li class="navbar-item">
+                    <a href="{{ url_for('train') }}" class="navbar-link">
+                        🧠 모델 학습
+                    </a>
+                </li>
+                <li class="navbar-item">
+                    <a href="{{ url_for('collector') }}" class="navbar-link">
+                        📊 데이터 수집
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <header class="header">
+            <h1>🚀 KSL 통합 워크스페이스</h1>
+            <p>데이터 수집부터 학습, 실시간 통역까지 한 곳에서!</p>
+        </header>
+
+        <!-- Progress Flow -->
+        <div class="progress-flow">
+            <div class="flow-step" id="flowCollect">
+                <span>📊</span>
+                <span>데이터 수집</span>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step" id="flowTrain">
+                <span>🧠</span>
+                <span>모델 학습</span>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step" id="flowTranslate">
+                <span>🤟</span>
+                <span>실시간 통역</span>
+            </div>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="tab-nav">
+            <button class="tab-btn active" data-tab="collect">
+                <span class="tab-icon">📊</span>
+                데이터 수집
+            </button>
+            <button class="tab-btn" data-tab="train">
+                <span class="tab-icon">🧠</span>
+                모델 학습
+            </button>
+            <button class="tab-btn" data-tab="translate">
+                <span class="tab-icon">🤟</span>
+                실시간 통역
+            </button>
+        </div>
+
+        <!-- Tab 1: Data Collection -->
+        <div class="tab-content active" id="tab-collect">
+            <div class="main-content">
+                <div class="left-panel">
+                    <div class="video-section">
+                        <div class="recording-indicator" id="recordingIndicator">
+                            <div class="recording-dot"></div>
+                            <span>녹화 중</span>
+                        </div>
+                        <div class="hand-detection-badge" id="handDetectionBadge">
+                            <span class="hand-icon">✋</span>
+                            <span id="handDetectionText">손 감지 대기</span>
+                        </div>
+                        <div class="video-container">
+                            <video id="videoCollect" autoplay playsinline muted style="position: absolute; width: 100%; height: 100%; object-fit: cover;"></video>
+                            <canvas id="canvasCollect" style="position: absolute; width: 100%; height: 100%;"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Live Progress Bar -->
+                    <div class="live-progress-container">
+                        <div class="live-progress-header">
+                            <div class="live-progress-title">
+                                <span>📈</span>
+                                <span id="currentGestureProgress">수집 진행률</span>
+                            </div>
+                            <div class="live-progress-controls">
+                                <div class="target-display">
+                                    <span>목표:</span>
+                                    <span class="target-value" id="targetValue">800</span>
+                                    <span>개</span>
+                                </div>
+                                <button class="edit-target-btn" id="editTargetBtn">✏️ 수정</button>
+                            </div>
+                        </div>
+                        <div class="live-progress-bar-wrapper">
+                            <div class="live-progress-bar-container">
+                                <div class="live-progress-bar-fill" id="liveProgressBarFill"></div>
+                            </div>
+                            <div class="live-progress-text" id="liveProgressText">0 / 800 (0%)</div>
+                        </div>
+                        <div class="live-progress-info">
+                            <span id="progressGestureName">동작을 선택하세요</span>
+                            <span class="progress-remaining" id="progressRemaining">-</span>
+                        </div>
+                    </div>
+
+                    <div class="controls-panel">
+                        <div class="control-section">
+                            <div class="control-row">
+                                <div class="control-label">
+                                    <span>🎨</span>
+                                    <span>손 스켈레톤 표시</span>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="skeletonToggleCollect" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="control-section">
+                            <div class="control-row">
+                                <div class="control-label">
+                                    <span>💾</span>
+                                    <span>자동 저장 (100개마다)</span>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="autoSaveToggle">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="quick-stats">
+                            <div class="quick-stat">
+                                <div class="quick-stat-value" id="quickSessionCount">0</div>
+                                <div class="quick-stat-label">이번 세션</div>
+                            </div>
+                            <div class="quick-stat">
+                                <div class="quick-stat-value" id="quickTotalCount">0</div>
+                                <div class="quick-stat-label">전체 수집</div>
+                            </div>
+                            <div class="quick-stat">
+                                <div class="quick-stat-value" id="quickFPS">0</div>
+                                <div class="quick-stat-label">FPS</div>
+                            </div>
+                        </div>
+                        <div class="button-group">
+                            <button class="btn btn-primary" id="startCollectBtn">📹 카메라 시작</button>
+                            <button class="btn btn-success" id="recordBtn" disabled>🔴 녹화 시작</button>
+                            <button class="btn btn-danger" id="stopCollectBtn" disabled>⏹️ 정지</button>
+                        </div>
+                        <div class="shortcuts-help">
+                            <strong>⌨️ 키보드 단축키</strong>
+                            <div class="shortcut-item">
+                                <span>녹화 시작/중지</span>
+                                <span class="shortcut-key">Space</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <span>데이터 저장</span>
+                                <span class="shortcut-key">Ctrl+S</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="right-panel">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>🎯 수집할 동작 선택</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="gesture-search-box">
+                                <input type="text" id="gestureSearch" placeholder="🔍 동작 검색..." class="form-control">
+                            </div>
+                            <div class="gesture-grid" id="gestureGrid"></div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>수집 현황</h3>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>현재 동작:</strong> <span id="currentGesture">선택 안됨</span></p>
+                            <p><strong>이번 세션 수집:</strong> <span id="sessionCount">0</span></p>
+                            <p><strong>전체 수집:</strong> <span id="totalCount">0</span></p>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar" id="progressBar" style="width: 0%;"></div>
+                            </div>
+                            <p id="recordingStatus" class="text-muted">대기 중...</p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>데이터 관리</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="button-group">
+                                <button class="btn btn-success" id="saveDataBtn">데이터 저장</button>
+                                <button class="btn btn-warning" id="resetDataBtn">데이터 초기화</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 2: Model Training -->
+        <div class="tab-content" id="tab-train">
+            <div class="main-content">
+                <div class="left-panel">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>🧠 학습 설정</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="control-section">
+                                <label><strong>빠른 설정 프리셋</strong></label>
+                                <select id="trainingPreset" class="form-control" style="margin-bottom: 20px;">
+                                    <option value="custom">🎯 사용자 정의</option>
+                                    <option value="fast">⚡ 빠른 학습 (테스트용)</option>
+                                    <option value="balanced" selected>⚖️ 균형잡힌 학습 (권장)</option>
+                                    <option value="accurate">🎯 고정확도 학습 (시간 소요)</option>
+                                    <option value="professional">🏆 전문가 모드 (최고 성능)</option>
+                                </select>
+                            </div>
+
+                            <div class="control-section">
+                                <label>에포크 (Epochs)</label>
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <input type="range" id="epochsSlider" min="10" max="200" step="10" value="50" style="flex: 1;">
+                                    <input type="number" id="epochsInput" value="50" min="10" max="200" class="form-control" style="width: 80px;">
+                                </div>
+                                <small class="text-muted">학습 반복 횟수. 많을수록 정확하지만 시간이 오래 걸립니다.</small>
+                            </div>
+
+                            <div class="control-section">
+                                <label>배치 크기 (Batch Size)</label>
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <input type="range" id="batchSizeSlider" min="8" max="128" step="8" value="32" style="flex: 1;">
+                                    <input type="number" id="batchSizeInput" value="32" min="8" max="128" class="form-control" style="width: 80px;">
+                                </div>
+                                <small class="text-muted">한 번에 처리하는 데이터 양. 클수록 빠르지만 메모리를 많이 사용합니다.</small>
+                            </div>
+
+                            <div class="control-section">
+                                <label>학습률 (Learning Rate)</label>
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <input type="range" id="learningRateSlider" min="0.0001" max="0.01" step="0.0001" value="0.001" style="flex: 1;">
+                                    <input type="number" id="learningRateInput" value="0.001" step="0.0001" class="form-control" style="width: 100px;">
+                                </div>
+                                <small class="text-muted">모델 학습 속도. 너무 높으면 불안정, 너무 낮으면 느립니다.</small>
+                            </div>
+
+                            <div class="control-section">
+                                <label>검증 데이터 비율</label>
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <input type="range" id="validationSplitSlider" min="0.1" max="0.3" step="0.05" value="0.2" style="flex: 1;">
+                                    <span id="validationSplitValue" style="min-width: 50px; font-weight: 600;">20%</span>
+                                </div>
+                                <small class="text-muted">검증에 사용할 데이터 비율. 20%가 일반적으로 적절합니다.</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>📊 데이터셋 정보</h3>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>총 샘플 수:</strong> <span id="datasetSize">0</span></p>
+                            <p><strong>제스처 종류:</strong> <span id="gestureTypes">0</span></p>
+                            <p><strong>학습 준비:</strong> <span id="trainingReady" class="text-muted">데이터 부족</span></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="right-panel">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>학습 진행</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="button-group">
+                                <button class="btn btn-primary" id="startTrainBtn">학습 시작</button>
+                                <button class="btn btn-danger" id="stopTrainBtn" disabled>학습 중지</button>
+                            </div>
+                            <div class="training-progress" id="trainingProgress" style="display: none;">
+                                <div class="epoch-progress">
+                                    <div class="epoch-label">
+                                        <span>에포크 진행</span>
+                                        <span id="epochText">0/50</span>
+                                    </div>
+                                    <div class="progress-bar-container">
+                                        <div class="progress-bar-fill" id="epochProgressBar"></div>
+                                    </div>
+                                </div>
+                                <div class="metrics-grid">
+                                    <div class="metric-box">
+                                        <div class="metric-label">학습 정확도</div>
+                                        <div class="metric-value" id="trainAccuracy">0%</div>
+                                    </div>
+                                    <div class="metric-box">
+                                        <div class="metric-label">검증 정확도</div>
+                                        <div class="metric-value" id="valAccuracy">0%</div>
+                                    </div>
+                                    <div class="metric-box">
+                                        <div class="metric-label">학습 손실</div>
+                                        <div class="metric-value" id="trainLoss">0</div>
+                                    </div>
+                                    <div class="metric-box">
+                                        <div class="metric-label">검증 손실</div>
+                                        <div class="metric-value" id="valLoss">0</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Real-time Training Chart -->
+                            <div class="card" id="trainingChartSection" style="display: none; margin-top: 20px; background: var(--bg-tertiary); padding: 20px; border-radius: 12px;">
+                                <h4 style="margin-bottom: 16px; color: var(--text-primary);">📊 실시간 학습 그래프</h4>
+                                <canvas id="trainingChart" style="max-height: 300px;"></canvas>
+                            </div>
+
+                            <div class="training-log" id="trainingLog"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 3: Real-time Translation -->
+        <div class="tab-content" id="tab-translate">
+            <div class="main-content">
+                <div class="left-panel">
+                    <div class="video-section">
+                        <div class="status-badge" id="statusBadge">
+                            <div class="status-indicator"></div>
+                            <span id="statusText">대기 중</span>
+                        </div>
+                        <div class="hand-detection-badge" id="handDetectionBadgeTranslate">
+                            <span class="hand-icon">✋</span>
+                            <span id="handDetectionTextTranslate">손 감지 대기</span>
+                        </div>
+                        <div class="video-container">
+                            <video id="videoTranslate" autoplay playsinline muted style="position: absolute; width: 100%; height: 100%; object-fit: cover;"></video>
+                            <canvas id="canvasTranslate" style="position: absolute; width: 100%; height: 100%;"></canvas>
+                        </div>
+                    </div>
+                    <div class="controls-panel">
+                        <div class="control-section">
+                            <div class="control-row">
+                                <div class="control-label">
+                                    <span>🎨</span>
+                                    <span>손 스켈레톤 표시</span>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="skeletonToggleTranslate" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="quick-stats">
+                            <div class="quick-stat">
+                                <div class="quick-stat-value" id="translateFPS">0</div>
+                                <div class="quick-stat-label">FPS</div>
+                            </div>
+                            <div class="quick-stat">
+                                <div class="quick-stat-value" id="translateCount">0</div>
+                                <div class="quick-stat-label">인식 횟수</div>
+                            </div>
+                            <div class="quick-stat">
+                                <div class="quick-stat-value" id="translateConfidence">0%</div>
+                                <div class="quick-stat-label">평균 신뢰도</div>
+                            </div>
+                        </div>
+                        <div class="button-group">
+                            <button class="btn btn-primary" id="startTranslateBtn">🎥 통역 시작</button>
+                            <button class="btn btn-danger" id="stopTranslateBtn" disabled>⏹️ 정지</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="right-panel">
+                    <div class="card result-card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <span class="card-icon">🤟</span>
+                                <span>인식된 수어</span>
+                            </div>
+                        </div>
+                        <div class="result-display">
+                            <div class="result-text" id="resultText">수어를 보여주세요</div>
+                            <div class="result-subtitle" id="resultSubtitle"></div>
+                        </div>
+                        <div class="confidence-section">
+                            <div class="confidence-header">
+                                <span>신뢰도</span>
+                                <span class="confidence-value" id="confidenceValue">0%</span>
+                            </div>
+                            <div class="confidence-bar">
+                                <div class="confidence-fill" id="confidenceFill"></div>
+                            </div>
+                            <div class="confidence-status" id="confidenceStatus">
+                                대기 중...
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <span class="card-icon">📝</span>
+                                <span>인식 기록</span>
+                            </div>
+                            <button class="btn-icon" id="clearHistoryBtn" title="기록 삭제">
+                                🗑️
+                            </button>
+                        </div>
+                        <div class="history-container" id="historyContainer">
+                            <div class="history-empty">아직 인식 기록이 없습니다</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auto-save notification -->
+    <div class="notification" id="autoSaveNotification">
+        <span>✅</span>
+        <span>자동 저장 완료!</span>
+    </div>
+
+    <!-- Target Edit Modal -->
+    <div class="modal" id="targetModal">
+        <div class="modal-content">
+            <div class="modal-header">🎯 목표 데이터셋 수량 설정</div>
+            <div class="modal-body">
+                <label class="modal-label">각 제스처당 목표 개수</label>
+                <input type="number" class="modal-input" id="targetInput" min="100" max="5000" step="50" value="800">
+                <small class="text-muted" style="display: block; margin-top: 8px;">권장: 500-1000개</small>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn modal-btn-cancel" id="cancelTargetBtn">취소</button>
+                <button class="modal-btn modal-btn-confirm" id="confirmTargetBtn">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="{{ url_for('static', filename='js/model.js') }}"></script>
+    <script src="{{ url_for('static', filename='workspace.js') }}"></script>
+</body>
+</html>

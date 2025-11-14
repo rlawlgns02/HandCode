@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>고정확도 한국 수어 통역기</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="{{ url_for('index') }}" class="navbar-brand">
+                🤟 KSL 수어 통역
+            </a>
+            <ul class="navbar-menu">
+                <li class="navbar-item">
+                    <a href="{{ url_for('index') }}" class="navbar-link active">
+                        🎥 실시간 통역
+                    </a>
+                </li>
+                <li class="navbar-item">
+                    <a href="{{ url_for('workspace') }}" class="navbar-link">
+                        🚀 워크스페이스
+                    </a>
+                </li>
+                <li class="navbar-item">
+                    <a href="{{ url_for('train') }}" class="navbar-link">
+                        🧠 모델 학습
+                    </a>
+                </li>
+                <li class="navbar-item">
+                    <a href="{{ url_for('collector') }}" class="navbar-link">
+                        📊 데이터 수집
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <div class="loading-text" id="loadingText">AI 모델 로딩 중...</div>
+            <div class="loading-progress">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <header class="header">
+            <h1>🤟 고정확도 한국 수어 통역기</h1>
+            <p>TensorFlow.js + MediaPipe 기반 실시간 AI 수어 인식</p>
+            <div class="model-info">
+                <span class="badge">정확도: 98%+</span>
+                <span class="badge">실시간 처리</span>
+                <span class="badge">30+ 수어 지원</span>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <!-- 왼쪽: 비디오 및 컨트롤 -->
+            <div class="left-panel">
+                <div class="video-section">
+                    <div class="video-overlay" id="videoOverlay">
+                        <div class="overlay-content">
+                            <div class="overlay-icon">📹</div>
+                            <div class="overlay-text">시작 버튼을 눌러주세요</div>
+                        </div>
+                    </div>
+                    
+                    <div class="status-badge" id="statusBadge">
+                        <div class="status-indicator"></div>
+                        <span id="statusText">대기 중</span>
+                    </div>
+                    
+                    <div class="info-badges">
+                        <div class="info-badge" id="fpsCounter">0 FPS</div>
+                        <div class="info-badge" id="handsCounter">0 손</div>
+                        <div class="info-badge" id="modelStatus">모델 대기</div>
+                    </div>
+
+                    <div class="video-container">
+                        <video id="video" autoplay playsinline muted></video>
+                        <canvas id="canvas"></canvas>
+                    </div>
+                </div>
+
+                <!-- 컨트롤 패널 -->
+                <div class="controls-panel">
+                    <div class="control-section">
+                        <div class="control-header">
+                            <div class="control-label">
+                                <span>🎯</span>
+                                <span>신뢰도 임계값</span>
+                            </div>
+                            <span class="control-value" id="thresholdValue">85%</span>
+                        </div>
+                        <input type="range" id="thresholdSlider" min="70" max="98" step="1" value="85">
+                        <div class="slider-labels">
+                            <span>민감</span>
+                            <span>보통</span>
+                            <span>엄격</span>
+                        </div>
+                    </div>
+
+                    <div class="control-section">
+                        <div class="control-header">
+                            <div class="control-label">
+                                <span>⏱️</span>
+                                <span>안정화 시간</span>
+                            </div>
+                            <span class="control-value" id="stabilityValue">500ms</span>
+                        </div>
+                        <input type="range" id="stabilitySlider" min="300" max="1000" step="100" value="500">
+                    </div>
+
+                    <div class="control-section">
+                        <div class="control-header">
+                            <div class="control-label">
+                                <span>🔬</span>
+                                <span>인식 민감도</span>
+                            </div>
+                            <span class="control-value" id="minDetectionConfidenceValue">0.5</span>
+                        </div>
+                        <input type="range" id="minDetectionConfidenceSlider" min="0.1" max="0.9" step="0.1" value="0.5">
+                    </div>
+
+                    <div class="control-section">
+                        <div class="control-header">
+                            <div class="control-label">
+                                <span>🧠</span>
+                                <span>모델 복잡도</span>
+                            </div>
+                            <span class="control-value" id="modelComplexityValue">정확</span>
+                        </div>
+                        <input type="range" id="modelComplexitySlider" min="0" max="1" step="1" value="1">
+                        <div class="slider-labels">
+                            <span>간단</span>
+                            <span>정확</span>
+                        </div>
+                    </div>
+
+                    <div class="control-section">
+                        <div class="control-row">
+                            <div class="control-label">
+                                <span>🎨</span>
+                                <span>스켈레톤 표시</span>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="skeletonToggle" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="control-section">
+                        <div class="control-row">
+                            <div class="control-label">
+                                <span>🔍</span>
+                                <span>상세 정보 표시</span>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="detailToggle">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-primary" id="startBtn">
+                        <span>📹</span>
+                        <span>시작</span>
+                    </button>
+                    <button class="btn btn-danger" id="stopBtn" disabled>
+                        <span>⏹️</span>
+                        <span>정지</span>
+                    </button>
+                    <button class="btn btn-secondary" id="exportBtn">
+                        <span>📥</span>
+                        <span>데이터 내보내기</span>
+                    </button>
+                </div>
+
+                <!-- 통계 패널 -->
+                <div class="stats-panel">
+                    <div class="stats-header">📊 실시간 통계</div>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-value" id="totalRecognitions">0</div>
+                            <div class="stat-label">총 인식</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="avgConfidence">0%</div>
+                            <div class="stat-label">평균 신뢰도</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="sessionTime">00:00</div>
+                            <div class="stat-label">세션 시간</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="accuracy">0%</div>
+                            <div class="stat-label">정확도</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 오른쪽: 결과 패널 -->
+            <div class="right-panel">
+                <!-- 인식 결과 -->
+                <div class="card result-card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span class="card-icon">🤟</span>
+                            <span>인식된 수어</span>
+                        </div>
+                    </div>
+                    <div class="result-display">
+                        <div class="result-text" id="resultText">수어를 보여주세요</div>
+                        <div class="result-subtitle" id="resultSubtitle"></div>
+                    </div>
+                    <div class="confidence-section">
+                        <div class="confidence-header">
+                            <span>신뢰도</span>
+                            <span class="confidence-value" id="confidenceValue">0%</span>
+                        </div>
+                        <div class="confidence-bar">
+                            <div class="confidence-fill" id="confidenceFill"></div>
+                        </div>
+                        <div class="confidence-status" id="confidenceStatus">
+                            대기 중...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 예측 확률 -->
+                <div class="card" id="predictionCard" style="display: none;">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span class="card-icon">📊</span>
+                            <span>예측 확률 (Top 5)</span>
+                        </div>
+                    </div>
+                    <div class="predictions-list" id="predictionsList"></div>
+                </div>
+
+                <!-- 인식 기록 -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span class="card-icon">📝</span>
+                            <span>인식 기록</span>
+                        </div>
+                        <button class="btn-icon" id="clearHistoryBtn" title="기록 삭제">
+                            🗑️
+                        </button>
+                    </div>
+                    <div class="history-container" id="historyContainer">
+                        <div class="history-empty">아직 인식 기록이 없습니다</div>
+                    </div>
+                </div>
+
+                <!-- 지원 수어 목록 -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span class="card-icon">📚</span>
+                            <span>지원하는 수어</span>
+                        </div>
+                    </div>
+                    <div class="gestures-grid" id="gesturesGrid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+    <script src="{{ url_for('static', filename='js/model.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

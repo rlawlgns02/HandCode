@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KSL 모델 학습</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+        .training-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .file-upload-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+
+        .training-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .log-container {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+
+        .log-entry {
+            margin: 5px 0;
+            line-height: 1.5;
+        }
+
+        .progress-section {
+            margin: 20px 0;
+        }
+
+        .epoch-progress {
+            width: 100%;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .epoch-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #4CAF50;
+            margin: 10px 0;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .chart-container {
+            margin: 20px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="{{ url_for('index') }}" class="navbar-brand">
+                🤟 KSL 수어 통역
+            </a>
+            <ul class="navbar-menu">
+                <li class="navbar-item">
+                    <a href="{{ url_for('index') }}" class="navbar-link">
+                        🎥 실시간 통역
+                    </a>
+                </li>
+                <li class="navbar-item">
+                    <a href="{{ url_for('workspace') }}" class="navbar-link">
+                        🚀 워크스페이스
+                    </a>
+                </li>
+                <li class="navbar-item">
+                    <a href="{{ url_for('train') }}" class="navbar-link active">
+                        🧠 모델 학습
+                    </a>
+                </li>
+                <li class="navbar-item">
+                    <a href="{{ url_for('collector') }}" class="navbar-link">
+                        📊 데이터 수집
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="training-container">
+        <header class="header">
+            <h1>🧠 KSL 모델 학습 시스템</h1>
+            <p>수집한 데이터셋으로 인공지능 모델을 학습시킵니다.</p>
+        </header>
+
+        <!-- 파일 업로드 섹션 -->
+        <div class="card file-upload-section">
+            <h3>📂 1. 데이터셋 로드</h3>
+            <p>collector.html에서 다운로드한 JSON 파일들을 선택하세요.</p>
+            <input type="file" id="fileInput" accept=".json" multiple class="form-control">
+            <p style="margin-top: 10px; color: #666; font-size: 0.9em;">
+                💡 <strong>팁:</strong> 여러 파일을 선택하려면 <strong>Ctrl+클릭</strong> (Windows) 또는 <strong>Cmd+클릭</strong> (Mac)을 사용하세요!
+            </p>
+            <p id="fileStatus" class="text-muted" style="margin-top: 10px;">파일을 선택해주세요...</p>
+            <div id="fileList" style="margin-top: 10px; display: none;">
+                <h4>선택된 파일:</h4>
+                <ul id="fileListItems" style="list-style-type: none; padding-left: 0;"></ul>
+            </div>
+        </div>
+
+        <!-- 학습 설정 -->
+        <div class="card">
+            <h3>⚙️ 2. 학습 설정</h3>
+            <div class="training-controls">
+                <div class="control-section">
+                    <label>에포크 (Epochs):</label>
+                    <input type="number" id="epochsInput" value="100" min="10" max="500" class="form-control">
+                </div>
+                <div class="control-section">
+                    <label>배치 크기 (Batch Size):</label>
+                    <input type="number" id="batchSizeInput" value="32" min="8" max="128" step="8" class="form-control">
+                </div>
+                <div class="control-section">
+                    <label>학습률 (Learning Rate):</label>
+                    <input type="number" id="learningRateInput" value="0.001" min="0.0001" max="0.1" step="0.0001" class="form-control">
+                </div>
+                <div class="control-section">
+                    <label>검증 데이터 비율:</label>
+                    <input type="number" id="validationSplitInput" value="0.2" min="0.1" max="0.4" step="0.05" class="form-control">
+                </div>
+            </div>
+            <div class="button-group" style="margin-top: 15px;">
+                <button class="btn btn-primary" id="startTrainingBtn" disabled>🚀 학습 시작</button>
+                <button class="btn btn-danger" id="stopTrainingBtn" disabled>⏹️ 학습 중지</button>
+                <button class="btn btn-success" id="downloadModelBtn" disabled>💾 모델 다운로드</button>
+            </div>
+        </div>
+
+        <!-- 통계 -->
+        <div class="stats-grid" id="statsGrid" style="display: none;">
+            <div class="stat-card">
+                <div class="stat-label">총 샘플 수</div>
+                <div class="stat-value" id="totalSamples">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">제스처 종류</div>
+                <div class="stat-value" id="numGestures">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">현재 에포크</div>
+                <div class="stat-value" id="currentEpoch">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">학습 정확도</div>
+                <div class="stat-value" id="trainAccuracy">0%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">검증 정확도</div>
+                <div class="stat-value" id="valAccuracy">0%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">예상 남은 시간</div>
+                <div class="stat-value" id="estimatedTime">-</div>
+            </div>
+        </div>
+
+        <!-- 진행률 -->
+        <div class="progress-section" id="progressSection" style="display: none;">
+            <h3>📊 학습 진행률</h3>
+            <div class="epoch-progress">
+                <div class="epoch-progress-bar" id="progressBar">0%</div>
+            </div>
+        </div>
+
+        <!-- 실시간 학습 그래프 -->
+        <div class="card" id="chartSection" style="display: none;">
+            <h3>📈 실시간 학습 그래프</h3>
+            <canvas id="trainingChart" width="800" height="400"></canvas>
+        </div>
+
+        <!-- 로그 -->
+        <div class="card">
+            <h3>📋 학습 로그</h3>
+            <div class="log-container" id="logContainer">
+                <div class="log-entry">시스템 준비 완료. 데이터셋을 로드하세요.</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0"></script>
+    <script src="{{ url_for('static', filename='js/model.js') }}"></script>
+    <script>
+        // 글로벌 변수
+        let dataset = [];
+        let model = null;
+        let isTraining = false;
+        let trainingStartTime = null;
+
+        const fileInput = document.getElementById('fileInput');
+        const fileStatus = document.getElementById('fileStatus');
+        const startTrainingBtn = document.getElementById('startTrainingBtn');
+        const stopTrainingBtn = document.getElementById('stopTrainingBtn');
+        const downloadModelBtn = document.getElementById('downloadModelBtn');
+        const logContainer = document.getElementById('logContainer');
+
+        // 학습 그래프 데이터
+        let chartData = {
+            epochs: [],
+            trainLoss: [],
+            trainAcc: [],
+            valLoss: [],
+            valAcc: []
+        };
+        let chart = null;
+
+        // 로그 출력 함수
+        function log(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = type === 'error' ? '❌' : type === 'success' ? '✅' : type === 'warning' ? '⚠️' : '▶';
+            entry.textContent = `[${timestamp}] ${prefix} ${message}`;
+            if (type === 'error') entry.style.color = '#ff4444';
+            if (type === 'success') entry.style.color = '#44ff44';
+            if (type === 'warning') entry.style.color = '#ffaa44';
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        // 그래프 초기화 함수
+        function initChart() {
+            const canvas = document.getElementById('trainingChart');
+            const ctx = canvas.getContext('2d');
+            chart = { canvas, ctx };
+
+            // 차트 데이터 초기화
+            chartData = {
+                epochs: [],
+                trainLoss: [],
+                trainAcc: [],
+                valLoss: [],
+                valAcc: []
+            };
+
+            document.getElementById('chartSection').style.display = 'block';
+        }
+
+        // 그래프 그리기 함수
+        function drawChart() {
+            if (!chart || chartData.epochs.length === 0) return;
+
+            const { canvas, ctx } = chart;
+            const width = canvas.width;
+            const height = canvas.height;
+            const padding = 60;
+            const plotWidth = width - padding * 2;
+            const plotHeight = height - padding * 2;
+
+            // 캔버스 초기화
+            ctx.clearRect(0, 0, width, height);
+            ctx.fillStyle = '#f8f9fa';
+            ctx.fillRect(0, 0, width, height);
+
+            // 데이터 범위 계산
+            const maxEpoch = Math.max(...chartData.epochs);
+            const maxLoss = Math.max(...chartData.trainLoss, ...chartData.valLoss);
+            const maxAcc = 1.0; // 정확도는 0-1 범위
+
+            // 그리드 그리기
+            ctx.strokeStyle = '#ddd';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 5; i++) {
+                const y = padding + (plotHeight / 5) * i;
+                ctx.beginPath();
+                ctx.moveTo(padding, y);
+                ctx.lineTo(width - padding, y);
+                ctx.stroke();
+            }
+
+            // Y축 레이블 (정확도)
+            ctx.fillStyle = '#333';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'right';
+            for (let i = 0; i <= 5; i++) {
+                const y = padding + (plotHeight / 5) * i;
+                const value = (1 - i * 0.2) * 100;
+                ctx.fillText(value.toFixed(0) + '%', padding - 10, y + 4);
+            }
+
+            // X축 레이블
+            ctx.textAlign = 'center';
+            const xStep = Math.max(1, Math.floor(maxEpoch / 10));
+            for (let i = 0; i <= maxEpoch; i += xStep) {
+                const x = padding + (plotWidth / maxEpoch) * i;
+                ctx.fillText(i.toString(), x, height - padding + 20);
+            }
+
+            // 축 라벨
+            ctx.font = 'bold 14px Arial';
+            ctx.fillText('Epoch', width / 2, height - 10);
+            ctx.save();
+            ctx.translate(15, height / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText('정확도 (%)', 0, 0);
+            ctx.restore();
+
+            // 선 그리기 함수
+            const drawLine = (data, color, label) => {
+                if (data.length === 0) return;
+
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+
+                for (let i = 0; i < data.length; i++) {
+                    const x = padding + (plotWidth / maxEpoch) * chartData.epochs[i];
+                    const y = padding + plotHeight * (1 - data[i]);
+
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                ctx.stroke();
+
+                // 마지막 점 표시
+                if (data.length > 0) {
+                    const lastX = padding + (plotWidth / maxEpoch) * chartData.epochs[data.length - 1];
+                    const lastY = padding + plotHeight * (1 - data[data.length - 1]);
+                    ctx.fillStyle = color;
+                    ctx.beginPath();
+                    ctx.arc(lastX, lastY, 4, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+            };
+
+            // 학습 정확도 (파란색)
+            drawLine(chartData.trainAcc, '#2196F3', '학습 정확도');
+
+            // 검증 정확도 (초록색)
+            drawLine(chartData.valAcc, '#4CAF50', '검증 정확도');
+
+            // 범례
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'left';
+
+            ctx.fillStyle = '#2196F3';
+            ctx.fillRect(width - 150, padding, 15, 15);
+            ctx.fillStyle = '#333';
+            ctx.fillText('학습 정확도', width - 130, padding + 12);
+
+            ctx.fillStyle = '#4CAF50';
+            ctx.fillRect(width - 150, padding + 25, 15, 15);
+            ctx.fillStyle = '#333';
+            ctx.fillText('검증 정확도', width - 130, padding + 37);
+        }
+
+        // 파일 업로드 핸들러
+        fileInput.addEventListener('change', async (e) => {
+            const files = Array.from(e.target.files);
+            if (files.length === 0) return;
+
+            log(`${files.length}개의 파일 로딩 중...`);
+            dataset = [];
+            const labelStats = {};
+
+            // 파일 리스트 표시
+            const fileListDiv = document.getElementById('fileList');
+            const fileListItems = document.getElementById('fileListItems');
+            fileListItems.innerHTML = '';
+
+            for (const file of files) {
+                try {
+                    const text = await file.text();
+                    const data = JSON.parse(text);
+
+                    if (data.dataset && Array.isArray(data.dataset)) {
+                        dataset.push(...data.dataset);
+
+                        // 통계
+                        data.dataset.forEach(item => {
+                            labelStats[item.label] = (labelStats[item.label] || 0) + 1;
+                        });
+
+                        log(`✓ ${file.name}: ${data.dataset.length}개 샘플`, 'success');
+
+                        // 파일 리스트에 추가
+                        const li = document.createElement('li');
+                        li.style.padding = '5px';
+                        li.style.color = '#4CAF50';
+                        li.innerHTML = `✓ ${file.name} - ${data.dataset.length}개 샘플`;
+                        fileListItems.appendChild(li);
+                    }
+                } catch (error) {
+                    log(`✗ ${file.name} 로드 실패: ${error.message}`, 'error');
+
+                    // 실패한 파일도 표시
+                    const li = document.createElement('li');
+                    li.style.padding = '5px';
+                    li.style.color = '#f44336';
+                    li.innerHTML = `✗ ${file.name} - 로드 실패`;
+                    fileListItems.appendChild(li);
+                }
+            }
+
+            if (dataset.length > 0) {
+                fileListDiv.style.display = 'block';
+
+                log(`총 ${dataset.length}개 샘플 로드 완료`, 'success');
+                log(`제스처 종류: ${Object.keys(labelStats).length}개`);
+
+                Object.entries(labelStats).forEach(([label, count]) => {
+                    log(`  - ${label}: ${count}개`);
+                });
+
+                document.getElementById('totalSamples').textContent = dataset.length;
+                document.getElementById('numGestures').textContent = Object.keys(labelStats).length;
+                document.getElementById('statsGrid').style.display = 'grid';
+
+                startTrainingBtn.disabled = false;
+                fileStatus.textContent = `✓ ${dataset.length}개 샘플 로드됨 (${files.length}개 파일)`;
+                fileStatus.style.color = '#4CAF50';
+            } else {
+                log('유효한 데이터를 찾을 수 없습니다.', 'error');
+            }
+        });
+
+        // 학습 시작
+        startTrainingBtn.addEventListener('click', async () => {
+            if (dataset.length === 0) {
+                alert('먼저 데이터셋을 로드해주세요.');
+                return;
+            }
+
+            isTraining = true;
+            trainingStartTime = Date.now();
+
+            startTrainingBtn.disabled = true;
+            stopTrainingBtn.disabled = false;
+            fileInput.disabled = true;
+            document.getElementById('progressSection').style.display = 'block';
+
+            log('=== 학습 시작 ===', 'success');
+
+            try {
+                // 설정 값 읽기
+                const epochs = parseInt(document.getElementById('epochsInput').value);
+                const batchSize = parseInt(document.getElementById('batchSizeInput').value);
+                const learningRate = parseFloat(document.getElementById('learningRateInput').value);
+                const validationSplit = parseFloat(document.getElementById('validationSplitInput').value);
+
+                log(`에포크: ${epochs}, 배치 크기: ${batchSize}`);
+                log(`학습률: ${learningRate}, 검증 데이터: ${validationSplit * 100}%`);
+
+                // 모델 생성
+                log('신경망 모델 생성 중...');
+                const slModel = new SignLanguageModel();
+                model = await slModel.createModel();
+
+                // 레이블 맵 생성
+                const labelMap = {};
+                slModel.labels.forEach((label, index) => {
+                    labelMap[label] = index;
+                });
+
+                // 데이터 전처리
+                log('데이터 전처리 중...');
+                tf.util.shuffle(dataset);
+
+                const inputs = dataset.map(d => d.landmarks);
+                const labels = dataset.map(d => labelMap[d.label]);
+
+                const xs = tf.tensor3d(inputs, [inputs.length, 21, 3]);
+                const ys = tf.oneHot(tf.tensor1d(labels, 'int32'), slModel.labels.length);
+
+                log(`입력 텐서: [${xs.shape}]`);
+                log(`출력 텐서: [${ys.shape}]`);
+                log('');
+
+                // 그래프 초기화
+                initChart();
+
+                // 학습 시작
+                log('모델 학습 중...', 'success');
+
+                await model.fit(xs, ys, {
+                    epochs: epochs,
+                    batchSize: batchSize,
+                    validationSplit: validationSplit,
+                    shuffle: true,
+                    callbacks: {
+                        onEpochEnd: (epoch, logs) => {
+                            if (!isTraining) return;
+
+                            const progress = ((epoch + 1) / epochs * 100).toFixed(1);
+                            document.getElementById('progressBar').style.width = progress + '%';
+                            document.getElementById('progressBar').textContent = progress + '%';
+
+                            document.getElementById('currentEpoch').textContent = `${epoch + 1}/${epochs}`;
+                            document.getElementById('trainAccuracy').textContent = (logs.acc * 100).toFixed(2) + '%';
+                            document.getElementById('valAccuracy').textContent = (logs.val_acc * 100).toFixed(2) + '%';
+
+                            // 예상 남은 시간
+                            const elapsed = Date.now() - trainingStartTime;
+                            const avgTimePerEpoch = elapsed / (epoch + 1);
+                            const remaining = avgTimePerEpoch * (epochs - epoch - 1) / 1000;
+                            document.getElementById('estimatedTime').textContent = remaining > 60
+                                ? `${(remaining / 60).toFixed(1)}분`
+                                : `${remaining.toFixed(0)}초`;
+
+                            // 그래프 데이터 업데이트
+                            chartData.epochs.push(epoch + 1);
+                            chartData.trainLoss.push(logs.loss);
+                            chartData.trainAcc.push(logs.acc);
+                            chartData.valLoss.push(logs.val_loss);
+                            chartData.valAcc.push(logs.val_acc);
+
+                            // 그래프 그리기 (매 에포크마다)
+                            drawChart();
+
+                            log(
+                                `Epoch ${epoch + 1}/${epochs} - ` +
+                                `손실: ${logs.loss.toFixed(4)}, 정확도: ${(logs.acc * 100).toFixed(2)}%, ` +
+                                `검증 손실: ${logs.val_loss.toFixed(4)}, 검증 정확도: ${(logs.val_acc * 100).toFixed(2)}%`
+                            );
+                        },
+                        onTrainEnd: () => {
+                            log('=== 학습 완료! ===', 'success');
+                            const duration = ((Date.now() - trainingStartTime) / 1000).toFixed(2);
+                            log(`총 소요 시간: ${duration}초`, 'success');
+
+                            stopTrainingBtn.disabled = true;
+                            downloadModelBtn.disabled = false;
+                        }
+                    }
+                });
+
+                // 리소스 정리
+                xs.dispose();
+                ys.dispose();
+
+            } catch (error) {
+                log(`학습 중 오류 발생: ${error.message}`, 'error');
+                console.error(error);
+            } finally {
+                isTraining = false;
+                startTrainingBtn.disabled = false;
+                fileInput.disabled = false;
+            }
+        });
+
+        // 학습 중지
+        stopTrainingBtn.addEventListener('click', () => {
+            isTraining = false;
+            log('학습이 사용자에 의해 중지되었습니다.', 'warning');
+            stopTrainingBtn.disabled = true;
+        });
+
+        // 모델 다운로드
+        downloadModelBtn.addEventListener('click', async () => {
+            if (!model) {
+                alert('학습된 모델이 없습니다.');
+                return;
+            }
+
+            try {
+                log('모델 저장 중...');
+
+                // 방법 1: IndexedDB에 저장 (권장)
+                await model.save('indexeddb://ksl-trained-model');
+                log('✓ 모델이 브라우저에 저장되었습니다!', 'success');
+
+                // 방법 2: 파일로도 다운로드 (백업용)
+                await model.save('downloads://trained-model');
+                log('✓ 모델 파일이 다운로드되었습니다!', 'success');
+
+                log('', 'success');
+                log('📁 다운로드된 파일 사용 방법:', 'success');
+                log('1. 다운로드 폴더에서 "trained-model.json"과 "trained-model.weights.bin" 파일을 찾습니다');
+                log('2. 프로젝트 폴더의 "trained-model" 폴더로 복사합니다');
+                log('3. 파일명을 "model.json"과 "model.weights.bin"으로 변경합니다');
+                log('4. index.html을 열어서 테스트합니다!');
+
+            } catch (error) {
+                log(`모델 저장 실패: ${error.message}`, 'error');
+            }
+        });
+
+        log('🎉 시스템 초기화 완료!', 'success');
+    </script>
+</body>
+</html>
